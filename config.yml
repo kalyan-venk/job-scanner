@@ -1,0 +1,162 @@
+# =============================================================================
+# JOB SCANNER CONFIG
+# =============================================================================
+# Edit this file to change companies, roles, or filtering. No Python needed.
+#
+# FILTER LOGIC (this is what drives precision/recall):
+#   A job title is KEPT if EITHER:
+#     (a) it contains any term in `strong_include`  (fires on its own), OR
+#     (b) it contains any term in `context_terms` AND any term in `role_words`
+#         (e.g. "model" alone is junk, "model" + "engineer" is real)
+#   ...UNLESS the title contains any term in `hard_exclude` (always dropped).
+#
+# This keeps recall high (catches MLE, Applied Scientist, MoTS, etc.) while
+# stopping the obvious false positives (financial modeling, sales models).
+# =============================================================================
+
+strong_include:
+  - "machine learning"
+  - "ml engineer"
+  - "mle"
+  - "ai engineer"
+  - "applied scientist"
+  - "applied ai"
+  - "research scientist"
+  - "research engineer"
+  - "deep learning"
+  - "llm"
+  - "nlp"
+  - "computer vision"
+  - "mlops"
+  - "ml platform"
+  - "ml infra"
+  - "ml infrastructure"
+  - "generative ai"
+  - "genai"
+  - "data scientist"
+  - "member of technical staff"
+  - "ml ops"
+  - "ai/ml"
+  # --- General SWE titles (WIDEST mode: catches SWE-titled ML work + all SWE) ---
+  # To cut volume later, delete the lines below you don't want, or add terms
+  # like "frontend"/"mobile"/"ios"/"android" to hard_exclude.
+  - "software engineer"
+  - "software developer"
+  - "software development engineer"
+  - "sde"
+  - "backend engineer"
+  - "back end engineer"
+  - "back-end engineer"
+  - "full stack engineer"
+  - "full-stack engineer"
+  - "fullstack engineer"
+  - "platform engineer"
+  - "infrastructure engineer"
+  - "systems engineer"
+  - "distributed systems"
+  - "data engineer"
+  - "devops engineer"
+  - "site reliability"
+  - "sre"
+  - "cloud engineer"
+  - "founding engineer"
+
+context_terms:
+  - "model"
+  - "inference"
+  - "evaluation"
+  - "eval"
+  - "ai"
+  - "ml"
+  - "agent"
+  - "rag"
+  - "fine-tuning"
+  - "foundation model"
+
+role_words:
+  - "engineer"
+  - "scientist"
+  - "developer"
+  - "architect"
+  - "researcher"
+  - "research"
+  - "ml"
+  - "ai"
+
+hard_exclude:
+  - "sales"
+  - "account executive"
+  - "recruiter"
+  - "marketing"
+  - "financial model"
+  - "business development"
+  - "customer success"
+  - "solutions consultant"
+  - "support engineer"
+  - "intern"
+  - "manager, "
+  - "director"
+
+location_keywords: []
+
+greenhouse:
+  - {slug: databricks, name: Databricks}
+  - {slug: stripe, name: Stripe}
+  - {slug: airbnb, name: Airbnb}
+  - {slug: coinbase, name: Coinbase}
+  - {slug: pinterest, name: Pinterest}
+  - {slug: robinhood, name: Robinhood}
+  - {slug: instacart, name: Instacart}
+  - {slug: mongodb, name: MongoDB}
+  - {slug: datadog, name: Datadog}
+  - {slug: lyft, name: Lyft}
+  - {slug: block, name: Block}
+  - {slug: roblox, name: Roblox}
+  - {slug: coupang, name: Coupang}
+  - {slug: chime, name: Chime}
+  - {slug: doordashusa, name: DoorDash}
+  - {slug: hubspotjobs, name: HubSpot}
+  - {slug: twilio, name: Twilio}
+  - {slug: anthropic, name: Anthropic}
+  - {slug: arizeai, name: Arize}  # CORRECTED: was 'arize' on ashby, real slug is 'arizeai' on greenhouse
+  - {slug: gleanwork, name: Glean}  # bonus: posts ML/LLM-eval roles
+  - {slug: fireworksai, name: Fireworks AI}  # bonus: AI infra, adjacent to inference reliability
+  - {slug: scaleai, name: Scale AI}
+  - {slug: figma, name: Figma}
+  - {slug: cloudflare, name: Cloudflare}
+  - {slug: discord, name: Discord}
+  - {slug: dropbox, name: Dropbox}
+  - {slug: sofi, name: SoFi}
+  - {slug: affirm, name: Affirm}
+  - {slug: samsara, name: Samsara}
+  - {slug: vercel, name: Vercel}
+
+lever:
+  - {slug: spotify, name: Spotify}
+  - {slug: zoox, name: Zoox}
+  - {slug: palantir, name: Palantir}
+
+ashby:
+  - {slug: plaid, name: Plaid}  # CORRECTED: migrated from lever to ashby
+  - {slug: workos, name: WorkOS}  # bonus: AI infra adjacent
+  - {slug: confluent, name: Confluent}
+  - {slug: snowflake, name: Snowflake}
+  - {slug: ramp, name: Ramp}
+  - {slug: notion, name: Notion}
+  - {slug: perplexity, name: Perplexity}
+  - {slug: openai, name: OpenAI}
+  - {slug: cohere, name: Cohere}
+
+  - {slug: braintrust, name: Braintrust}
+  - {slug: langfuse, name: Langfuse}
+
+
+# Workday companies. Each needs tenant/wd_host/site found from the company's
+# real career page (see README "Finding Workday tenant info" section).
+# Confirmed via live search:
+workday:
+  - {tenant: nvidia, wd_host: wd5, site: NVIDIAExternalCareerSite, name: Nvidia}
+  - {tenant: walmart, wd_host: wd5, site: WalmartExternal, name: Walmart}
+  - {tenant: citi, wd_host: wd5, site: "2", name: Citi}
+  # Add more below using the same shape. Paste the network request URL you
+  # find and I'll convert it to this format.
