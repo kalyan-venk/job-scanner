@@ -9,9 +9,6 @@
 #     (b) it contains any term in `context_terms` AND any term in `role_words`
 #         (e.g. "model" alone is junk, "model" + "engineer" is real)
 #   ...UNLESS the title contains any term in `hard_exclude` (always dropped).
-#
-# This keeps recall high (catches MLE, Applied Scientist, MoTS, etc.) while
-# stopping the obvious false positives (financial modeling, sales models).
 # =============================================================================
 
 strong_include:
@@ -37,9 +34,6 @@ strong_include:
   - "member of technical staff"
   - "ml ops"
   - "ai/ml"
-  # --- General SWE titles (WIDEST mode: catches SWE-titled ML work + all SWE) ---
-  # To cut volume later, delete the lines below you don't want, or add terms
-  # like "frontend"/"mobile"/"ios"/"android" to hard_exclude.
   - "software engineer"
   - "software developer"
   - "software development engineer"
@@ -118,9 +112,9 @@ greenhouse:
   - {slug: hubspotjobs, name: HubSpot}
   - {slug: twilio, name: Twilio}
   - {slug: anthropic, name: Anthropic}
-  - {slug: arizeai, name: Arize}  # CORRECTED: was 'arize' on ashby, real slug is 'arizeai' on greenhouse
-  - {slug: gleanwork, name: Glean}  # bonus: posts ML/LLM-eval roles
-  - {slug: fireworksai, name: Fireworks AI}  # bonus: AI infra, adjacent to inference reliability
+  - {slug: arizeai, name: Arize}
+  - {slug: gleanwork, name: Glean}
+  - {slug: fireworksai, name: Fireworks AI}
   - {slug: scaleai, name: Scale AI}
   - {slug: figma, name: Figma}
   - {slug: cloudflare, name: Cloudflare}
@@ -130,6 +124,10 @@ greenhouse:
   - {slug: affirm, name: Affirm}
   - {slug: samsara, name: Samsara}
   - {slug: vercel, name: Vercel}
+  # --- added tonight ---
+  - {slug: patronusaiinc, name: Patronus AI}
+  - {slug: comet, name: Comet ML}
+  - {slug: weights_and_biases, name: Weights & Biases}
 
 lever:
   - {slug: spotify, name: Spotify}
@@ -137,8 +135,8 @@ lever:
   - {slug: palantir, name: Palantir}
 
 ashby:
-  - {slug: plaid, name: Plaid}  # CORRECTED: migrated from lever to ashby
-  - {slug: workos, name: WorkOS}  # bonus: AI infra adjacent
+  - {slug: plaid, name: Plaid}
+  - {slug: workos, name: WorkOS}
   - {slug: confluent, name: Confluent}
   - {slug: snowflake, name: Snowflake}
   - {slug: ramp, name: Ramp}
@@ -146,17 +144,17 @@ ashby:
   - {slug: perplexity, name: Perplexity}
   - {slug: openai, name: OpenAI}
   - {slug: cohere, name: Cohere}
-
-  - {slug: braintrust, name: Braintrust}
+  - {slug: Braintrust, name: Braintrust}
   - {slug: langfuse, name: Langfuse}
+  # --- added tonight ---
+  - {slug: fiddler-ai, name: Fiddler AI}
+  - {slug: langchain, name: LangChain}
 
-
-# Workday companies. Each needs tenant/wd_host/site found from the company's
-# real career page (see README "Finding Workday tenant info" section).
-# Confirmed via live search:
+# Workday companies. tenant/wd_host/site found via dev tools or address bar.
 workday:
   - {tenant: nvidia, wd_host: wd5, site: NVIDIAExternalCareerSite, name: Nvidia}
-  - {tenant: walmart, wd_host: wd5, site: WalmartExternal, name: Walmart}
   - {tenant: citi, wd_host: wd5, site: "2", name: Citi}
-  # Add more below using the same shape. Paste the network request URL you
-  # find and I'll convert it to this format.
+  # Walmart removed: wd5/WalmartExternal returns HTTP 410 (dead). Re-find if needed.
+
+# Dover-hosted (not yet automated, single off-pattern company, low priority):
+# Helicone -> https://app.dover.com/jobs/helicone (no adapter built yet)

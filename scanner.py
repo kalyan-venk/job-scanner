@@ -42,6 +42,7 @@ def from_greenhouse(slug, name):
         "location": (j.get("location") or {}).get("name", ""),
         "url": j.get("absolute_url", ""),
         "company": name,
+        "posted_at": j.get("first_published") or j.get("updated_at", ""),
     } for j in data.get("jobs", [])]
 
 
@@ -50,12 +51,20 @@ def from_lever(slug, name):
     out = []
     for j in data:
         cats = j.get("categories", {}) or {}
+        created = j.get("createdAt")  # epoch ms
+        posted = ""
+        if created:
+            try:
+                posted = datetime.fromtimestamp(int(created) / 1000, tz=timezone.utc).isoformat()
+            except (ValueError, TypeError):
+                posted = ""
         out.append({
             "id": f"lv:{slug}:{j.get('id','')}",
             "title": j.get("text", ""),
             "location": cats.get("location", ""),
             "url": j.get("hostedUrl", ""),
             "company": name,
+            "posted_at": posted,
         })
     return out
 
@@ -68,6 +77,7 @@ def from_ashby(slug, name):
         "location": j.get("location", ""),
         "url": j.get("jobUrl", ""),
         "company": name,
+        "posted_at": j.get("publishedAt", ""),
     } for j in data.get("jobs", [])]
 
 
@@ -103,6 +113,7 @@ def from_workday(entry, name):
             "location": j.get("locationsText", ""),
             "url": f"https://{tenant}.{wd_host}.myworkdayjobs.com/{site}{path}" if path else "",
             "company": name,
+            "posted_at": "",  # Workday gives relative text ("Posted 3 Days Ago"), not a parseable date
         })
     return out
 
@@ -228,6 +239,24 @@ def main():
     print(f"Sent {sent} email(s), one per company.")
 
 
+def format_posted(posted_at):
+    """Human-readable relative time, e.g. 'posted 3h ago' or 'posted Jun 22'."""
+    if not posted_at:
+        return "post time unknown"
+    try:
+        dt = datetime.fromisoformat(posted_at.replace("Z", "+00:00"))
+        now = datetime.now(timezone.utc)
+        delta = now - dt
+        hours = delta.total_seconds() / 3600
+        if hours < 1:
+            return f"posted {int(delta.total_seconds() / 60)}m ago"
+        if hours < 24:
+            return f"posted {int(hours)}h ago"
+        return f"posted {dt.strftime('%b %d')}"
+    except (ValueError, TypeError):
+        return "post time unknown"
+
+
 def send_company_email(company, jobs):
     host = os.environ.get("SMTP_HOST", "smtp.gmail.com")
     port = int(os.environ.get("SMTP_PORT", "587"))
@@ -236,17 +265,25 @@ def send_company_email(company, jobs):
     to_addr = os.environ.get("ALERT_TO", user)
 
     n = len(jobs)
-    lines = [f"<h2>{company}: {n} new ML/AI role(s)</h2><ul>"]
-    for j in sorted(jobs, key=lambda x: x["title"]):
+    # Sort newest-first when we have a real timestamp, title as tiebreak/fallback
+    jobs_sorted = sorted(jobs, key=lambda x: (x.get("posted_at") or "", x["title"]), reverse=True)
+
+    lines = [f"<h2>{n} new role(s) at {company}</h2><ul>"]
+    for j in jobs_sorted:
         loc = f" &mdash; {j['location']}" if j["location"] else ""
-        lines.append(f'<li><a href="{j["url"]}">{j["title"]}</a>{loc}</li>')
+        when = format_posted(j.get("posted_at", ""))
+        lines.append(f'<li><a href="{j["url"]}">{j["title"]}</a>{loc} &mdash; <i>{when}</i></li>')
     lines.append("</ul>")
     html = "\n".join(lines)
 
-    msg = MIMEMultipart("alternative")
+    # Subject uses the most recent posting's time for the headline timestamp
+    newest_when = format_posted(jobs_sorted[0].get("posted_at", "")) if jobs_sorted else ""
     plural = "s" if n != 1 else ""
-    msg["Subject"] = f"[{company}] {n} new ML/AI role{plural}"
-    msg["From"] = user
+    subject = f"{n} new role{plural} at {company} ({newest_when})" if newest_when else f"{n} new role{plural} at {company}"
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = f"Job Scanner <{user}>"
     msg["To"] = to_addr
     msg.attach(MIMEText(html, "html"))
 
