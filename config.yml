@@ -174,3 +174,126 @@ workday:
 
 # Dover-hosted (not yet automated, single off-pattern company, low priority):
 # Helicone -> https://app.dover.com/jobs/helicone (no adapter built yet)
+
+# =============================================================================
+# JD MATCH SCORING (free, keyword-based, no API calls)
+# =============================================================================
+# Reads the full job description (not just title) and scores it into your
+# 5-tier system based on weighted keyword presence. Higher weight = stronger
+# signal that the role matches your actual background.
+# Tune freely: add/remove terms, adjust weights. Re-runs apply on next scan.
+
+match_scoring:
+  # Strongest signal: deep technical ML/AI work matching your actual hands-on
+  # experience. LLM eval is ONE area you've built, not the only one that counts.
+  # Computer vision, recommenders, classical ML, NLP, etc. score equally here
+  # when the role shows the same depth of technical ownership.
+  tier_s_terms:
+    weight: 5
+    terms:
+      # --- LLM eval / agentic (your research, NOT your only lane) ---
+      - "llm evaluation"
+      - "llm eval"
+      - "model evaluation"
+      - "inference reliability"
+      - "evaluator"
+      - "hallucination"
+      - "trustworthiness"
+      - "langgraph"
+      - "multi-agent"
+      - "agentic"
+      - "rlhf"
+      - "human preference"
+      # --- core ML / production ML, equal weight, equal priority ---
+      - "model deployment"
+      - "model serving"
+      - "feature engineering"
+      - "feature store"
+      - "recommendation system"
+      - "recommender system"
+      - "computer vision"
+      - "object detection"
+      - "image classification"
+      - "time series"
+      - "forecasting model"
+      - "anomaly detection"
+      - "nlp"
+      - "natural language processing"
+      - "ranking model"
+      - "search ranking"
+      - "ml pipeline"
+      - "model training"
+      - "model monitoring"
+      - "data drift"
+      - "ml lifecycle"
+      - "predictive model"
+      - "classification model"
+      - "deep learning model"
+      - "neural network"
+
+  # Strong signal: your direct stack and experience.
+  tier_a_terms:
+    weight: 3
+    terms:
+      - "pytorch"
+      - "huggingface"
+      - "hugging face"
+      - "xgboost"
+      - "scikit-learn"
+      - "sklearn"
+      - "mlflow"
+      - "rag"
+      - "vector database"
+      - "fine-tun"
+      - "lora"
+      - "peft"
+      - "qlora"
+      - "fastapi"
+      - "sagemaker"
+      - "production ml"
+      - "ml infrastructure"
+      - "model validation"
+      - "a/b test"
+      - "experimentation"
+
+  # Moderate signal: general ML/SWE relevance, still counts but weaker.
+  tier_b_terms:
+    weight: 1
+    terms:
+      - "machine learning"
+      - "python"
+      - "data pipeline"
+      - "kubernetes"
+      - "docker"
+      - "aws"
+      - "distributed systems"
+      - "microservices"
+      - "rest api"
+
+  # Negative signal: roles that look ML-adjacent in title but are not a fit.
+  # Each hit SUBTRACTS from the score.
+  penalty_terms:
+    weight: -4
+    terms:
+      - "phd required"
+      - "phd preferred"
+      - "10+ years"
+      - "12+ years"
+      - "15+ years"
+      - "security clearance"
+      - "us citizen required"
+      - "must be a us citizen"
+      - "no sponsorship"
+      - "not able to sponsor"
+      - "unable to sponsor"
+      - "does not sponsor"
+
+  # Score thresholds mapping total weighted score to your 5-tier labels.
+  # Tune these based on real distribution once you see scores in emails.
+  thresholds:
+    made_for_you: 15
+    good_match: 8
+    average_match: 3
+    somewhat_stretch: 1
+    # below somewhat_stretch floor (score <= 0, including zero-signal jobs
+    # that hit no terms at all) = "Time Waste"

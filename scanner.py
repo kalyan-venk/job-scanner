@@ -34,8 +34,16 @@ def fetch_json(url):
 
 # ---------- ATS adapters: each returns normalized job dicts ----------
 
+def strip_html(html):
+    """Crude HTML-to-text: drop tags, collapse whitespace. Good enough for keyword scoring."""
+    import re
+    text = re.sub(r"<[^>]+>", " ", html or "")
+    text = text.replace("&amp;", "&").replace("&nbsp;", " ").replace("&lt;", "<").replace("&gt;", ">")
+    return re.sub(r"\s+", " ", text).strip()
+
+
 def from_greenhouse(slug, name):
-    data = fetch_json(f"https://boards-api.greenhouse.io/v1/boards/{slug}/jobs?content=false")
+    data = fetch_json(f"https://boards-api.greenhouse.io/v1/boards/{slug}/jobs?content=true")
     return [{
         "id": f"gh:{slug}:{j['id']}",
         "title": j.get("title", ""),
@@ -43,6 +51,7 @@ def from_greenhouse(slug, name):
         "url": j.get("absolute_url", ""),
         "company": name,
         "posted_at": j.get("first_published") or j.get("updated_at", ""),
+        "jd_text": strip_html(j.get("content", "")),
     } for j in data.get("jobs", [])]
 
 
@@ -58,6 +67,12 @@ def from_lever(slug, name):
                 posted = datetime.fromtimestamp(int(created) / 1000, tz=timezone.utc).isoformat()
             except (ValueError, TypeError):
                 posted = ""
+        jd_parts = [
+            j.get("descriptionPlain", "") or strip_html(j.get("description", "")),
+        ]
+        for section in j.get("lists", []) or []:
+            jd_parts.append(section.get("text", ""))
+            jd_parts.append(strip_html(section.get("content", "")))
         out.append({
             "id": f"lv:{slug}:{j.get('id','')}",
             "title": j.get("text", ""),
@@ -65,6 +80,7 @@ def from_lever(slug, name):
             "url": j.get("hostedUrl", ""),
             "company": name,
             "posted_at": posted,
+            "jd_text": " ".join(p for p in jd_parts if p),
         })
     return out
 
@@ -78,6 +94,7 @@ def from_ashby(slug, name):
         "url": j.get("jobUrl", ""),
         "company": name,
         "posted_at": j.get("publishedAt", ""),
+        "jd_text": j.get("descriptionPlain", "") or strip_html(j.get("descriptionHtml", "")),
     } for j in data.get("jobs", [])]
 
 
@@ -156,6 +173,46 @@ def keep(job, cfg):
 
 # ---------- Main ----------
 
+def score_jd(job, cfg):
+    """
+    Free keyword-based JD scoring. Returns (label, score, matched_terms).
+    Reads jd_text (falls back to title if JD text unavailable, e.g. Workday).
+    """
+    scoring = cfg.get("match_scoring")
+    if not scoring:
+        return (None, 0, [])
+
+    text = (job.get("jd_text") or "") + " " + job.get("title", "")
+    text = text.lower()
+    if not text.strip():
+        return (None, 0, [])
+
+    score = 0
+    matched = []
+    for tier_key in ["tier_s_terms", "tier_a_terms", "tier_b_terms", "penalty_terms"]:
+        tier = scoring.get(tier_key, {})
+        weight = tier.get("weight", 0)
+        for term in tier.get("terms", []):
+            if term.lower() in text:
+                score += weight
+                if weight > 0:
+                    matched.append(term)
+
+    th = scoring.get("thresholds", {})
+    if score >= th.get("made_for_you", 15):
+        label = "Made for you"
+    elif score >= th.get("good_match", 8):
+        label = "Good match"
+    elif score >= th.get("average_match", 3):
+        label = "Average match"
+    elif score >= th.get("somewhat_stretch", 0):
+        label = "Somewhat stretch"
+    else:
+        label = "Time waste"
+
+    return (label, score, matched)
+
+
 def load_cfg():
     with open(CONFIG_FILE) as f:
         cfg = yaml.safe_load(f)
@@ -211,6 +268,13 @@ def main():
 
     new_jobs = [j for j in matched if j["id"] not in seen]
 
+    # Score each new job against your resume signals (free, keyword-based).
+    for j in new_jobs:
+        label, score, hits = score_jd(j, cfg)
+        j["match_label"] = label
+        j["match_score"] = score
+        j["match_hits"] = hits
+
     # Persist everything currently matched (closed roles age out, no re-alerts).
     with open(SEEN_FILE, "w") as f:
         json.dump(sorted({j["id"] for j in matched}), f, indent=0)
@@ -265,21 +329,42 @@ def send_company_email(company, jobs):
     to_addr = os.environ.get("ALERT_TO", user)
 
     n = len(jobs)
-    # Sort newest-first when we have a real timestamp, title as tiebreak/fallback
-    jobs_sorted = sorted(jobs, key=lambda x: (x.get("posted_at") or "", x["title"]), reverse=True)
+    # Sort best-match-first, posted-time as tiebreak
+    jobs_sorted = sorted(
+        jobs,
+        key=lambda x: (x.get("match_score", 0), x.get("posted_at") or "", x["title"]),
+        reverse=True,
+    )
+
+    label_colors = {
+        "Made for you": "#15803d",
+        "Good match": "#16a34a",
+        "Average match": "#ca8a04",
+        "Somewhat stretch": "#ea580c",
+        "Time waste": "#9ca3af",
+    }
 
     lines = [f"<h2>{n} new role(s) at {company}</h2><ul>"]
     for j in jobs_sorted:
         loc = f" &mdash; {j['location']}" if j["location"] else ""
         when = format_posted(j.get("posted_at", ""))
-        lines.append(f'<li><a href="{j["url"]}">{j["title"]}</a>{loc} &mdash; <i>{when}</i></li>')
+        label = j.get("match_label")
+        tag = ""
+        if label:
+            color = label_colors.get(label, "#6b7280")
+            tag = f' <b style="color:{color}">[{label}]</b>'
+        lines.append(f'<li>{tag} <a href="{j["url"]}">{j["title"]}</a>{loc} &mdash; <i>{when}</i></li>')
     lines.append("</ul>")
     html = "\n".join(lines)
 
-    # Subject uses the most recent posting's time for the headline timestamp
+    # Subject leads with the best match label found in this batch, if any.
     newest_when = format_posted(jobs_sorted[0].get("posted_at", "")) if jobs_sorted else ""
+    best_label = jobs_sorted[0].get("match_label") if jobs_sorted else None
     plural = "s" if n != 1 else ""
-    subject = f"{n} new role{plural} at {company} ({newest_when})" if newest_when else f"{n} new role{plural} at {company}"
+    prefix = f"[{best_label}] " if best_label else ""
+    subject = f"{prefix}{n} new role{plural} at {company}"
+    if newest_when:
+        subject += f" ({newest_when})"
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
