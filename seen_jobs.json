@@ -1882,7 +1882,6 @@
 "gh:figma:5830640004",
 "gh:figma:5837760004",
 "gh:figma:5838098004",
-"gh:figma:5839202004",
 "gh:figma:5840332004",
 "gh:figma:5976930004",
 "gh:figma:5983820004",
@@ -2174,6 +2173,8 @@
 "gh:mongodb:8010102",
 "gh:mongodb:8012626",
 "gh:mongodb:8015792",
+"gh:mongodb:8026658",
+"gh:mongodb:8026663",
 "gh:patronusaiinc:4234483009",
 "gh:patronusaiinc:4241103009",
 "gh:patronusaiinc:4264664009",
@@ -3113,5 +3114,6 @@
 "wd:nvidia:/job/US-CA-Santa-Clara/Senior-Full-stack-Software-Engineer---Verification-Data-and-Visualization-Platform_JR2019652",
 "wd:nvidia:/job/US-CA-Santa-Clara/Senior-Infrastructure-Software-Engineer--Deep-Learning-Libraries_JR2020105",
 "wd:nvidia:/job/US-CA-Santa-Clara/Senior-Robotics-Systems-Engineer---Neural-Reconstruction-and-Real2Sim-Applications_JR2020173",
+"wd:nvidia:/job/US-CA-Santa-Clara/Senior-Software-Engineer---DGX-Cloud-Services-and-Software_JR2017413",
 "wd:nvidia:/job/US-CA-Santa-Clara/Senior-Software-Engineer--CUDA-UMD---Graphs-and-GPU-Sharing_JR2014056"
 ]
