@@ -86,9 +86,6 @@ hard_exclude:
   - "business development"
   - "customer success"
   - "solutions consultant"
-  - "support engineer"
-  - "intern"
-  - "manager, "
   - "director"
 
 location_keywords: []
@@ -290,6 +287,17 @@ match_scoring:
 
   # Score thresholds mapping total weighted score to your 5-tier labels.
   # Tune these based on real distribution once you see scores in emails.
+  # Years-of-experience penalty. Kalyan has ~4 yrs; 5 is fine (1 yr gap is
+  # negligible). 6+ starts hurting, scaling per extra year.
+  experience_penalty:
+    max_acceptable_years: 5
+    weight_per_year_over: -4   # e.g. asks for 7 yrs -> (7-5)*-4 = -8
+
+  # Explicit C++/JavaScript/TypeScript requirement penalty (flat, not scaled).
+  language_requirement_penalty:
+    enabled: true
+    weight: -4
+
   thresholds:
     made_for_you: 15
     good_match: 8

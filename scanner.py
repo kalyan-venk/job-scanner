@@ -10,6 +10,7 @@ persists across runs.
 
 import json
 import os
+import re
 import smtplib
 import time
 import urllib.request
@@ -36,7 +37,6 @@ def fetch_json(url):
 
 def strip_html(html):
     """Crude HTML-to-text: drop tags, collapse whitespace. Good enough for keyword scoring."""
-    import re
     text = re.sub(r"<[^>]+>", " ", html or "")
     text = text.replace("&amp;", "&").replace("&nbsp;", " ").replace("&lt;", "<").replace("&gt;", ">")
     return re.sub(r"\s+", " ", text).strip()
@@ -109,8 +109,10 @@ def from_workday(entry, name):
     Config shape:
       {tenant: nvidia, wd_host: wd5, site: NVIDIAExternalCareerSite, name: Nvidia}
 
-    Endpoint pattern (POST, not GET - Workday's CXS API requires POST with a body):
-      https://{tenant}.{wd_host}.myworkdayjobs.com/wday/cxs/{tenant}/{site}/jobs
+    Listings endpoint (POST) gives title/location/path only, no JD text.
+    Full JD text requires a SEPARATE per-job GET call - see fetch_workday_jd().
+    We only call that for genuinely NEW jobs (in main()), not on every listing
+    fetch, to keep request volume sane on a 5-minute schedule.
     """
     tenant = entry["tenant"]
     wd_host = entry["wd_host"]
@@ -131,8 +133,35 @@ def from_workday(entry, name):
             "url": f"https://{tenant}.{wd_host}.myworkdayjobs.com/{site}{path}" if path else "",
             "company": name,
             "posted_at": "",  # Workday gives relative text ("Posted 3 Days Ago"), not a parseable date
+            "_wd_tenant": tenant,
+            "_wd_host": wd_host,
+            "_wd_site": site,
+            "_wd_path": path,
         })
     return out
+
+
+def fetch_workday_jd(job):
+    """
+    Fetch full JD text for a single Workday job. Only called for NEW jobs,
+    one GET request per job, to avoid hammering Workday's API (which sits
+    behind Akamai bot protection) on every 5-minute scan.
+    """
+    tenant = job.get("_wd_tenant")
+    wd_host = job.get("_wd_host")
+    site = job.get("_wd_site")
+    path = job.get("_wd_path")
+    if not all([tenant, wd_host, site, path]):
+        return ""
+    url = f"https://{tenant}.{wd_host}.myworkdayjobs.com/wday/cxs/{tenant}/{site}/job{path}"
+    try:
+        req = urllib.request.Request(url, headers=UA)
+        with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        posting = data.get("jobPostingInfo", {})
+        return strip_html(posting.get("jobDescription", ""))
+    except Exception:
+        return ""
 
 
 ADAPTERS = {"greenhouse": from_greenhouse, "lever": from_lever, "ashby": from_ashby}
@@ -173,6 +202,79 @@ def keep(job, cfg):
 
 # ---------- Main ----------
 
+def extract_min_years_required(text):
+    """
+    Finds patterns like '6+ years', '6-8 years', 'minimum of 7 years',
+    '7 yrs experience' and returns the highest MINIMUM years figure found,
+    or None if no such pattern exists. Used to penalize JDs asking for
+    meaningfully more experience than Kalyan has (~4 yrs; 5 is fine).
+    """
+    patterns = [
+        r"(\d{1,2})\s*\+\s*years?",                          # "6+ years"
+        r"(\d{1,2})\s*-\s*\d{1,2}\s*years?",                 # "6-8 years" (take lower bound)
+        r"minimum\s+of\s+(\d{1,2})\s*years?",                # "minimum of 7 years"
+        r"at\s+least\s+(\d{1,2})\s*years?",                  # "at least 7 years"
+        r"(\d{1,2})\s*\+?\s*yrs?\b",                         # "7 yrs" / "7+ yrs"
+        r"(\d{1,2})\s*years?\s+of\s+experience",             # "5 years of experience" (bare)
+        r"(\d{1,2})\s*years?\s+(?:relevant\s+)?experience",  # "5 years experience" / "5 years relevant experience"
+    ]
+    found = []
+    for pat in patterns:
+        for m in re.finditer(pat, text):
+            try:
+                found.append(int(m.group(1)))
+            except (ValueError, IndexError):
+                continue
+    found = [n for n in found if 1 <= n <= 25]
+    return max(found) if found else None
+
+
+def has_cpp_or_js_requirement(text):
+    """
+    Detects explicit C++ or JavaScript requirement language. Requires the
+    language name to appear near requirement-flavored words, to avoid
+    false positives on JDs that merely list it among many nice-to-haves.
+    """
+    lang_pattern = r"(c\+\+|javascript|typescript|node\.?js|react\.?js)"
+    require_pattern = r"(required|requirement|must have|proficien|expert|strong experience|years? of experience)"
+    for lang_match in re.finditer(lang_pattern, text):
+        window = text[max(0, lang_match.start() - 80): lang_match.end() + 80]
+        if re.search(require_pattern, window):
+            return True
+    return False
+
+
+US_STATE_ABBR = {
+    "al","ak","az","ar","ca","co","ct","de","fl","ga","hi","id","il","in","ia",
+    "ks","ky","la","me","md","ma","mi","mn","ms","mo","mt","ne","nv","nh","nj",
+    "nm","ny","nc","nd","oh","ok","or","pa","ri","sc","sd","tn","tx","ut","vt",
+    "va","wa","wv","wi","wy","dc",
+}
+
+NON_US_SIGNALS = [
+    "india", "bangalore", "bengaluru", "hyderabad", "pune", "mumbai", "delhi",
+    "london", "uk", "united kingdom", "england", "germany", "berlin", "munich",
+    "france", "paris", "canada", "toronto", "vancouver", "ontario",
+    "singapore", "japan", "tokyo", "china", "shanghai", "beijing",
+    "australia", "sydney", "melbourne", "netherlands", "amsterdam",
+    "ireland", "dublin", "spain", "madrid", "italy", "milan", "poland",
+    "brazil", "mexico", "emea", "apac", "israel", "tel aviv",
+]
+
+
+def is_likely_non_us(location):
+    """
+    Conservative non-US detector: only flags when a recognizable non-US
+    signal is present. Defaults to NOT flagging (assume US) when ambiguous,
+    since a false 'likely non-US' tag on a real US role is worse than
+    occasionally missing the tag.
+    """
+    loc = (location or "").lower()
+    if not loc:
+        return False
+    return any(sig in loc for sig in NON_US_SIGNALS)
+
+
 def score_jd(job, cfg):
     """
     Free keyword-based JD scoring. Returns (label, score, matched_terms).
@@ -197,6 +299,25 @@ def score_jd(job, cfg):
                 score += weight
                 if weight > 0:
                     matched.append(term)
+
+    # Years-of-experience penalty: only penalize when the JD asks for MORE
+    # than what's acceptable. 5 years is fine (1 year gap doesn't matter);
+    # 6+ is the real problem. Penalty scales slightly with how far over.
+    yrs_cfg = scoring.get("experience_penalty", {})
+    max_ok_years = yrs_cfg.get("max_acceptable_years", 5)
+    yrs_weight = yrs_cfg.get("weight_per_year_over", -4)
+    min_years = extract_min_years_required(text)
+    if min_years is not None and min_years > max_ok_years:
+        over_by = min_years - max_ok_years
+        score += yrs_weight * over_by
+        matched.append(f"[penalty: asks {min_years}+ yrs experience]")
+
+    # C++/JS requirement penalty: explicit requirement language near the term.
+    lang_cfg = scoring.get("language_requirement_penalty", {})
+    lang_weight = lang_cfg.get("weight", -4)
+    if lang_cfg.get("enabled", True) and has_cpp_or_js_requirement(text):
+        score += lang_weight
+        matched.append("[penalty: explicit C++/JS requirement]")
 
     th = scoring.get("thresholds", {})
     if score >= th.get("made_for_you", 15):
@@ -268,12 +389,25 @@ def main():
 
     new_jobs = [j for j in matched if j["id"] not in seen]
 
+    # Workday jobs need a SEPARATE per-job fetch for JD text (the listing
+    # endpoint doesn't include it). Only do this for genuinely new jobs.
+    for j in new_jobs:
+        if j["id"].startswith("wd:") and "jd_text" not in j:
+            j["jd_text"] = fetch_workday_jd(j)
+            time.sleep(0.3)
+
     # Score each new job against your resume signals (free, keyword-based).
     for j in new_jobs:
         label, score, hits = score_jd(j, cfg)
         j["match_label"] = label
         j["match_score"] = score
         j["match_hits"] = hits
+        j["likely_non_us"] = is_likely_non_us(j.get("location", ""))
+
+    # Drop internal Workday helper fields before persisting/emailing.
+    for j in matched:
+        for k in ["_wd_tenant", "_wd_host", "_wd_site", "_wd_path"]:
+            j.pop(k, None)
 
     # Persist everything currently matched (closed roles age out, no re-alerts).
     with open(SEEN_FILE, "w") as f:
@@ -321,6 +455,33 @@ def format_posted(posted_at):
         return "post time unknown"
 
 
+def build_open_all_link(jobs_in_category):
+    """
+    Gmail strips <script> tags and blocks javascript: links in email bodies,
+    so a true one-click 'open all tabs from inside the email' isn't possible.
+    Workaround: a data:text/html URL containing a tiny self-contained page
+    with one button that opens every job URL in a new tab via window.open.
+    Clicking the email link opens this page (one extra click), then the
+    button on that page opens everything else.
+    """
+    import urllib.parse
+    urls = [j["url"] for j in jobs_in_category if j.get("url")]
+    if not urls:
+        return None
+    buttons_js = ",".join(f'"{u}"' for u in urls)
+    page = f"""<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="font-family:sans-serif;padding:40px;text-align:center;">
+<h2>{len(urls)} job(s) ready to open</h2>
+<button onclick='var u=[{buttons_js}];u.forEach(function(x){{window.open(x,"_blank");}});'
+style="font-size:18px;padding:14px 28px;cursor:pointer;background:#16a34a;color:white;border:none;border-radius:8px;">
+Open all {len(urls)} jobs in new tabs
+</button>
+<p style="color:#888;margin-top:20px;font-size:13px;">Your browser may ask to allow pop-ups for this page the first time.</p>
+</body></html>"""
+    encoded = urllib.parse.quote(page)
+    return f"data:text/html,{encoded}"
+
+
 def send_company_email(company, jobs):
     host = os.environ.get("SMTP_HOST", "smtp.gmail.com")
     port = int(os.environ.get("SMTP_PORT", "587"))
@@ -329,7 +490,6 @@ def send_company_email(company, jobs):
     to_addr = os.environ.get("ALERT_TO", user)
 
     n = len(jobs)
-    # Sort best-match-first, posted-time as tiebreak
     jobs_sorted = sorted(
         jobs,
         key=lambda x: (x.get("match_score", 0), x.get("posted_at") or "", x["title"]),
@@ -343,21 +503,56 @@ def send_company_email(company, jobs):
         "Somewhat stretch": "#ea580c",
         "Time waste": "#9ca3af",
     }
+    label_order = ["Made for you", "Good match", "Average match", "Somewhat stretch", "Time waste"]
 
-    lines = [f"<h2>{n} new role(s) at {company}</h2><ul>"]
+    by_label = {}
     for j in jobs_sorted:
-        loc = f" &mdash; {j['location']}" if j["location"] else ""
-        when = format_posted(j.get("posted_at", ""))
-        label = j.get("match_label")
-        tag = ""
-        if label:
-            color = label_colors.get(label, "#6b7280")
-            tag = f' <b style="color:{color}">[{label}]</b>'
-        lines.append(f'<li>{tag} <a href="{j["url"]}">{j["title"]}</a>{loc} &mdash; <i>{when}</i></li>')
-    lines.append("</ul>")
+        by_label.setdefault(j.get("match_label") or "Unscored", []).append(j)
+
+    lines = [f"<h2>{n} new role(s) at {company}</h2>"]
+
+    # Per-category "open all" link, only shown when a category has 2+ jobs
+    # (single-job categories don't need it) and only when there's more than
+    # one category total (single-category emails don't need the button either).
+    if len(by_label) > 1:
+        lines.append('<div style="margin-bottom:16px;">')
+        for label in label_order:
+            group = by_label.get(label)
+            if group and len(group) > 1:
+                link = build_open_all_link(group)
+                color = label_colors.get(label, "#6b7280")
+                if link:
+                    lines.append(
+                        f'<a href="{link}" style="display:inline-block;margin:4px 8px 4px 0;'
+                        f'padding:6px 12px;background:{color};color:white;border-radius:6px;'
+                        f'text-decoration:none;font-size:13px;">Open all {len(group)} [{label}]</a>'
+                    )
+        lines.append("</div>")
+
+    for label in label_order:
+        group = by_label.get(label)
+        if not group:
+            continue
+        color = label_colors.get(label, "#6b7280")
+        lines.append(f'<p style="color:{color};font-weight:bold;margin:14px 0 4px;">[{label}]</p><ul>')
+        for j in group:
+            loc = f" &mdash; {j['location']}" if j["location"] else ""
+            when = format_posted(j.get("posted_at", ""))
+            non_us = ' <span style="color:#9ca3af;">[likely non-US]</span>' if j.get("likely_non_us") else ""
+            lines.append(f'<li><a href="{j["url"]}">{j["title"]}</a>{loc}{non_us} &mdash; <i>{when}</i></li>')
+        lines.append("</ul>")
+
+    # Any jobs with no label (scoring disabled/unavailable) at the end
+    if "Unscored" in by_label:
+        lines.append('<p style="color:#6b7280;font-weight:bold;margin:14px 0 4px;">[Unscored]</p><ul>')
+        for j in by_label["Unscored"]:
+            loc = f" &mdash; {j['location']}" if j["location"] else ""
+            when = format_posted(j.get("posted_at", ""))
+            lines.append(f'<li><a href="{j["url"]}">{j["title"]}</a>{loc} &mdash; <i>{when}</i></li>')
+        lines.append("</ul>")
+
     html = "\n".join(lines)
 
-    # Subject leads with the best match label found in this batch, if any.
     newest_when = format_posted(jobs_sorted[0].get("posted_at", "")) if jobs_sorted else ""
     best_label = jobs_sorted[0].get("match_label") if jobs_sorted else None
     plural = "s" if n != 1 else ""
