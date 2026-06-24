@@ -1,0 +1,53 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="Eslint" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <list>
+          <option value="datasets" />
+          <option value="pandas" />
+          <option value="numpy" />
+          <option value="pyarrow" />
+          <option value="transformers" />
+          <option value="sentence-transformers" />
+          <option value="rouge-score" />
+          <option value="bert-score" />
+          <option value="textstat" />
+          <option value="scikit-learn" />
+          <option value="xgboost" />
+          <option value="torch" />
+          <option value="mlflow" />
+          <option value="streamlit" />
+          <option value="matplotlib" />
+          <option value="seaborn" />
+          <option value="umap-learn" />
+          <option value="plotly" />
+          <option value="pyyaml" />
+          <option value="tqdm" />
+          <option value="loguru" />
+          <option value="pytest" />
+          <option value="ruff" />
+          <option value="ipykernel" />
+          <option value="jupyter" />
+        </list>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="PyPep8NamingInspection" enabled="true" level="WEAK WARNING" enabled_by_default="true">
+      <option name="ignoredErrors">
+        <list>
+          <option value="N802" />
+          <option value="N803" />
+          <option value="N806" />
+        </list>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="PyUnresolvedReferencesInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredIdentifiers">
+        <list>
+          <option value="set.*" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>

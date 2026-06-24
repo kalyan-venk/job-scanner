@@ -154,6 +154,7 @@ ashby:
 workday:
   - {tenant: nvidia, wd_host: wd5, site: NVIDIAExternalCareerSite, name: Nvidia}
   - {tenant: citi, wd_host: wd5, site: "2", name: Citi}
+  - { tenant: geico, wd_host: wd1, site: External, name: GEICO}
   # Walmart removed: wd5/WalmartExternal returns HTTP 410 (dead). Re-find if needed.
 
 # Dover-hosted (not yet automated, single off-pattern company, low priority):
