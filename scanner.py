@@ -169,12 +169,30 @@ ADAPTERS = {"greenhouse": from_greenhouse, "lever": from_lever, "ashby": from_as
 
 # ---------- Two-tier filter (drives precision/recall) ----------
 
+def is_staff_seniority_title(title):
+    """
+    Matches 'Staff' used as a SENIORITY modifier ('Staff Engineer', 'Senior
+    Staff', 'Principal Staff Engineer') while explicitly protecting 'Member
+    of Technical Staff', which is a real entry/mid-level title at AI labs
+    that happens to contain the word 'staff' but means something different.
+    """
+    t = title.lower()
+    if "member of technical staff" in t:
+        return False
+    # "staff" as its own word, anywhere else in the title, counts as a
+    # seniority signal (Staff Engineer, Sr. Staff, Staff II, Distinguished Staff)
+    return bool(re.search(r"\bstaff\b", t))
+
+
 def title_matches(title, cfg):
     t = title.lower()
 
     for x in cfg["hard_exclude"]:
         if x in t:
             return False
+
+    if cfg.get("staff_seniority_exclude", True) and is_staff_seniority_title(title):
+        return False
 
     for s in cfg["strong_include"]:
         if s in t:
@@ -189,6 +207,13 @@ def title_matches(title, cfg):
     return False
 
 
+def has_clearance_requirement(text, cfg):
+    """Checks text for government/defense clearance language."""
+    terms = cfg.get("clearance_exclude_terms", [])
+    t = text.lower()
+    return any(term.lower() in t for term in terms)
+
+
 def location_matches(location, loc_kw):
     if not loc_kw:
         return True
@@ -196,8 +221,40 @@ def location_matches(location, loc_kw):
     return any(k in loc for k in loc_kw)
 
 
+def is_too_old(posted_at, max_age_days):
+    """
+    True if posted_at is older than max_age_days. Jobs with NO parseable
+    date (empty string - this is Workday's case, confirmed no date field
+    exists) always return False (never filtered on age), per policy.
+    """
+    if not posted_at:
+        return False
+    try:
+        dt = datetime.fromisoformat(posted_at.replace("Z", "+00:00"))
+        age_days = (datetime.now(timezone.utc) - dt).total_seconds() / 86400
+        return age_days > max_age_days
+    except (ValueError, TypeError):
+        return False
+
+
 def keep(job, cfg):
-    return title_matches(job["title"], cfg) and location_matches(job["location"], cfg["location_keywords"])
+    if not title_matches(job["title"], cfg):
+        return False
+    if not location_matches(job["location"], cfg["location_keywords"]):
+        return False
+    if is_too_old(job.get("posted_at", ""), cfg.get("max_age_days", 7)):
+        return False
+    if is_likely_non_us(job.get("location", "")):
+        return False
+    # Clearance check: works fully for Greenhouse/Lever/Ashby (jd_text is
+    # already populated at this point). For Workday, jd_text isn't fetched
+    # until AFTER this filter runs (only for genuinely new jobs, to limit
+    # request volume - see fetch_workday_jd in main()), so clearance terms
+    # in Workday JDs are NOT caught here. Acceptable tradeoff: Workday is a
+    # small slice of total volume right now.
+    if has_clearance_requirement(job.get("jd_text", "") + " " + job["title"], cfg):
+        return False
+    return True
 
 
 # ---------- Main ----------
@@ -396,6 +453,14 @@ def main():
             j["jd_text"] = fetch_workday_jd(j)
             time.sleep(0.3)
 
+    # Now that Workday JD text is available, re-apply the clearance filter
+    # for Workday jobs specifically (they couldn't be checked earlier, since
+    # jd_text didn't exist yet at the keep() stage for that ATS).
+    new_jobs = [
+        j for j in new_jobs
+        if not (j["id"].startswith("wd:") and has_clearance_requirement(j.get("jd_text", "") + " " + j["title"], cfg))
+    ]
+
     # Score each new job against your resume signals (free, keyword-based).
     for j in new_jobs:
         label, score, hits = score_jd(j, cfg)
@@ -455,33 +520,6 @@ def format_posted(posted_at):
         return "post time unknown"
 
 
-def build_open_all_link(jobs_in_category):
-    """
-    Gmail strips <script> tags and blocks javascript: links in email bodies,
-    so a true one-click 'open all tabs from inside the email' isn't possible.
-    Workaround: a data:text/html URL containing a tiny self-contained page
-    with one button that opens every job URL in a new tab via window.open.
-    Clicking the email link opens this page (one extra click), then the
-    button on that page opens everything else.
-    """
-    import urllib.parse
-    urls = [j["url"] for j in jobs_in_category if j.get("url")]
-    if not urls:
-        return None
-    buttons_js = ",".join(f'"{u}"' for u in urls)
-    page = f"""<!DOCTYPE html><html><head><meta charset="utf-8"></head>
-<body style="font-family:sans-serif;padding:40px;text-align:center;">
-<h2>{len(urls)} job(s) ready to open</h2>
-<button onclick='var u=[{buttons_js}];u.forEach(function(x){{window.open(x,"_blank");}});'
-style="font-size:18px;padding:14px 28px;cursor:pointer;background:#16a34a;color:white;border:none;border-radius:8px;">
-Open all {len(urls)} jobs in new tabs
-</button>
-<p style="color:#888;margin-top:20px;font-size:13px;">Your browser may ask to allow pop-ups for this page the first time.</p>
-</body></html>"""
-    encoded = urllib.parse.quote(page)
-    return f"data:text/html,{encoded}"
-
-
 def send_company_email(company, jobs):
     host = os.environ.get("SMTP_HOST", "smtp.gmail.com")
     port = int(os.environ.get("SMTP_PORT", "587"))
@@ -510,24 +548,6 @@ def send_company_email(company, jobs):
         by_label.setdefault(j.get("match_label") or "Unscored", []).append(j)
 
     lines = [f"<h2>{n} new role(s) at {company}</h2>"]
-
-    # Per-category "open all" link, only shown when a category has 2+ jobs
-    # (single-job categories don't need it) and only when there's more than
-    # one category total (single-category emails don't need the button either).
-    if len(by_label) > 1:
-        lines.append('<div style="margin-bottom:16px;">')
-        for label in label_order:
-            group = by_label.get(label)
-            if group and len(group) > 1:
-                link = build_open_all_link(group)
-                color = label_colors.get(label, "#6b7280")
-                if link:
-                    lines.append(
-                        f'<a href="{link}" style="display:inline-block;margin:4px 8px 4px 0;'
-                        f'padding:6px 12px;background:{color};color:white;border-radius:6px;'
-                        f'text-decoration:none;font-size:13px;">Open all {len(group)} [{label}]</a>'
-                    )
-        lines.append("</div>")
 
     for label in label_order:
         group = by_label.get(label)

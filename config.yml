@@ -87,6 +87,15 @@ hard_exclude:
   - "customer success"
   - "solutions consultant"
   - "director"
+  - "product manager"
+  - "finance manager"
+  - "phd"
+  - "account manager"
+  - "vice president"
+  # NOTE: "staff" as a seniority modifier (Staff Engineer, Senior Staff) is
+  # handled separately in code (is_staff_seniority_title), NOT here, because
+  # a plain substring match on "staff" would also wrongly block
+  # "Member of Technical Staff" which is a real entry/mid title you want.
 
 location_keywords: []
 
@@ -305,3 +314,32 @@ match_scoring:
     somewhat_stretch: 1
     # below somewhat_stretch floor (score <= 0, including zero-signal jobs
     # that hit no terms at all) = "Time Waste"
+
+# =============================================================================
+# HARD FILTERS - jobs matching these are DROPPED ENTIRELY, never emailed.
+# Different from hard_exclude above (which is title-only); these check JD
+# text, posting age, and location, and are applied as a final gate.
+# =============================================================================
+
+# Drop any job whose JD mentions government/defense clearance requirements.
+clearance_exclude_terms:
+  - "security clearance"
+  - "active clearance"
+  - "ts/sci"
+  - "tsi active clearance"
+  - "top secret clearance"
+  - "secret clearance"
+  - "public trust clearance"
+  - "must be eligible to obtain a clearance"
+  - "u.s. citizenship required"
+  - "us citizenship required"
+
+# Drop jobs older than this many days. Greenhouse/Lever/Ashby give a real
+# posted date, so this applies cleanly there. Workday gives NO parseable
+# date (confirmed), so Workday jobs always pass through regardless of age.
+max_age_days: 7
+
+# Staff-as-seniority title exclusion. Matches "Staff Engineer", "Senior Staff",
+# "Principal Staff", etc. but explicitly protects "Member of Technical Staff"
+# (a real title you want) from being caught by the same word.
+staff_seniority_exclude: true
