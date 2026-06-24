@@ -1400,6 +1400,7 @@
 "gh:coupang:7994956",
 "gh:coupang:7994958",
 "gh:coupang:7994997",
+"gh:coupang:7997383",
 "gh:coupang:8002103",
 "gh:coupang:8009235",
 "gh:coupang:8012236",
@@ -3104,8 +3105,8 @@
 "lv:zoox:fa96e7a4-df02-41c3-91c6-248a5bad6fa7",
 "lv:zoox:fae3a833-35de-4258-8618-d9878b69a9ab",
 "lv:zoox:fd97675c-3483-42c6-826f-12fbb96ccafc",
-"wd:citi:/job/Capital-Federal--Argentina/SEPAIMPO---SECOEXPO-Checker_26965362-1",
 "wd:citi:/job/Jersey-City-New-Jersey-United-States/Junior-Data-Services-and-AI-Developer---Officer_26967855",
+"wd:citi:/job/New-York-New-York-United-States/MD--Head-of-Artificial-Intelligence--AI---Services---Platform---Data-Services--PDS-_26960075",
 "wd:geico:/job/Lakeland-FL/Claims-Specialist_R0064599",
 "wd:geico:/job/Palo-Alto-CA/Principal-Product-Manager--Reliability-Platform--Observability--SRE--AIM-_R0063484",
 "wd:geico:/job/Renton-WA/Sr-Staff-Platform-Engineer----Temporal-SRE-Open-Source-----HYBRID-_R0064179",
@@ -3116,5 +3117,5 @@
 "wd:nvidia:/job/US-CA-Santa-Clara/Senior-Infrastructure-Software-Engineer--Deep-Learning-Libraries_JR2020105",
 "wd:nvidia:/job/US-CA-Santa-Clara/Senior-Robotics-Systems-Engineer---Neural-Reconstruction-and-Real2Sim-Applications_JR2020173",
 "wd:nvidia:/job/US-CA-Santa-Clara/Senior-Software-Engineer---DGX-Cloud-Services-and-Software_JR2017413",
-"wd:nvidia:/job/US-CA-Santa-Clara/Senior-Software-Engineer--CUDA-UMD---Graphs-and-GPU-Sharing_JR2014056"
+"wd:nvidia:/job/US-CA-Santa-Clara/Senior-Systems-Software-Engineer--Kubernetes-Scale---DGX-Cloud_JR2019385"
 ]
