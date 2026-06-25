@@ -92,6 +92,8 @@ hard_exclude:
   - "phd"
   - "account manager"
   - "vice president"
+  - "frontend"
+  - "principal software"
   # NOTE: "staff" as a seniority modifier (Staff Engineer, Senior Staff) is
   # handled separately in code (is_staff_seniority_title), NOT here, because
   # a plain substring match on "staff" would also wrongly block
@@ -322,6 +324,14 @@ match_scoring:
 # =============================================================================
 
 # Drop any job whose JD mentions government/defense clearance requirements.
+# Drop any job whose JD BODY (not just title) mentions these terms.
+# Different from hard_exclude (title-only). A job whose title looks fine but
+# whose description reveals it's actually frontend-heavy or a Principal
+# Software role gets caught here even if the title alone wouldn't trigger it.
+jd_hard_exclude_terms:
+  - "frontend"
+  - "principal software"
+
 clearance_exclude_terms:
   - "security clearance"
   - "active clearance"

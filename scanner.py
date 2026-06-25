@@ -214,6 +214,17 @@ def has_clearance_requirement(text, cfg):
     return any(term.lower() in t for term in terms)
 
 
+def has_jd_hard_exclude_term(text, cfg):
+    """
+    Checks JD body text (title + description) for terms that should drop
+    the job entirely, regardless of where in the text they appear. Different
+    from hard_exclude, which only ever checks the title.
+    """
+    terms = cfg.get("jd_hard_exclude_terms", [])
+    t = text.lower()
+    return any(term.lower() in t for term in terms)
+
+
 def location_matches(location, loc_kw):
     if not loc_kw:
         return True
@@ -253,6 +264,10 @@ def keep(job, cfg):
     # in Workday JDs are NOT caught here. Acceptable tradeoff: Workday is a
     # small slice of total volume right now.
     if has_clearance_requirement(job.get("jd_text", "") + " " + job["title"], cfg):
+        return False
+    # Same ATS limitation as clearance: works fully for Greenhouse/Lever/Ashby,
+    # Workday needs the post-fetch re-check (see main()).
+    if has_jd_hard_exclude_term(job.get("jd_text", "") + " " + job["title"], cfg):
         return False
     return True
 
@@ -453,12 +468,15 @@ def main():
             j["jd_text"] = fetch_workday_jd(j)
             time.sleep(0.3)
 
-    # Now that Workday JD text is available, re-apply the clearance filter
-    # for Workday jobs specifically (they couldn't be checked earlier, since
-    # jd_text didn't exist yet at the keep() stage for that ATS).
+    # Now that Workday JD text is available, re-apply the clearance and
+    # JD-hard-exclude filters for Workday jobs specifically (they couldn't be
+    # checked earlier, since jd_text didn't exist yet at the keep() stage).
     new_jobs = [
         j for j in new_jobs
-        if not (j["id"].startswith("wd:") and has_clearance_requirement(j.get("jd_text", "") + " " + j["title"], cfg))
+        if not (j["id"].startswith("wd:") and (
+            has_clearance_requirement(j.get("jd_text", "") + " " + j["title"], cfg)
+            or has_jd_hard_exclude_term(j.get("jd_text", "") + " " + j["title"], cfg)
+        ))
     ]
 
     # Score each new job against your resume signals (free, keyword-based).

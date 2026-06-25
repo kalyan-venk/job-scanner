@@ -38,7 +38,7 @@ LABELED = [
     ("Site Reliability Engineer", 1),
     ("Founding Engineer", 1),
     ("Cloud Engineer, AWS", 1),
-    ("Software Engineer, Frontend", 1),   # still wanted in widest mode
+    ("Software Engineer, Frontend", 0),   # policy update: frontend now excluded
     # --- Genuinely off-target: not wanted ---
     ("Account Executive, Enterprise", 0),
     ("Financial Modeling Analyst", 0),
@@ -52,9 +52,9 @@ LABELED = [
     ("Senior Accountant", 0),
     ("Model Risk Analyst", 0),
     ("Program Manager, Data", 0),
-    ("Engineering Manager, ML Platform", 0),  # policy: manager excluded
-    ("Director, AI Strategy", 0),             # policy: director excluded
-    ("ML Engineering Intern", 0),             # policy: intern excluded
+    ("Engineering Manager, ML Platform", 1),  # policy update: manager now wanted (years-exp scoring handles fit)
+    ("Director, AI Strategy", 0),             # policy: director still excluded
+    ("ML Engineering Intern", 1),             # policy update: internships now wanted
     ("Product Manager, Pricing Models", 0),
 ]
 
