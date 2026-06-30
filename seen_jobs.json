@@ -3,6 +3,7 @@
 "as:confluent:905efbaa-d814-4b16-a377-d417c7d3d772",
 "as:harvey:6684931f-a85f-4849-9240-e2329b21305f",
 "as:harvey:d78083d9-a203-4ae4-b4b9-454d65df3702",
+"as:langchain:d81c35c1-7243-45e4-bfe2-7fc8746c76b9",
 "as:notion:53fb4637-d1d6-4411-8a87-52865db5a11c",
 "as:notion:671ea859-ae45-46fb-9421-97d401cb987a",
 "as:notion:876c69a9-be0a-4a71-bf4a-04cbc9c6328e",
@@ -105,7 +106,6 @@
 "wd:nvidia:/job/US-CA-Santa-Clara/Principal-Supply-Chain-Modeling-Engineer_JR2019920",
 "wd:nvidia:/job/US-CA-Santa-Clara/Senior-Data-Scientist---Finance_JR2015085",
 "wd:nvidia:/job/US-CA-Santa-Clara/Senior-Deep-Learning-Engineer---Autonomous-Vehicles_JR2020184",
-"wd:nvidia:/job/US-CA-Santa-Clara/Senior-Systems-Software-Engineer--Accelerated-Kubernetes-Performance-and-Scale---DGX-Cloud_JR2020524-1",
 "wd:nvidia:/job/US-CA-Santa-Clara/Senior-Technical-Marketing-Engineer--AI-Infrastructure_JR2001250",
 "wd:nvidia:/job/US-CA-Santa-Clara/System-Software-Engineer---Performance-Lab_JR2019929",
 "wd:nvidia:/job/US-OR-Hillsboro/Senior-Data-Backend-Engineer_JR2020354"
