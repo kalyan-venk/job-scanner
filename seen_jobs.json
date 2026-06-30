@@ -87,9 +87,6 @@
 "gh:stripe:8026416",
 "gh:stripe:8026511",
 "gh:vercel:6093255004",
-"lv:mistral:4eca6d89-c813-4f50-969c-b3ea88b6b956",
-"lv:mistral:d495bb77-df1f-44ef-9b63-e6f54cc95e41",
-"lv:mistral:e6accd7d-27d5-45f0-9f35-3454064374af",
 "lv:palantir:e500bcf3-19d8-4d3c-b340-4d76e4a55b40",
 "lv:zoox:00694777-4083-426f-8382-3d0073c34787",
 "lv:zoox:44136143-ba13-4839-bdc5-26a7633080a3",
@@ -100,7 +97,9 @@
 "wd:nvidia:/job/China-Shanghai/Senior-Networking-Solution-Test-Engineer---AI-Cluster-Debugging_JR2020238-1",
 "wd:nvidia:/job/Israel-Yokneam/Senior-VLSI-CAD-and-AI-Automation-Engineer_JR1997583",
 "wd:nvidia:/job/US-CA-Santa-Clara/Senior-DevOps-Engineer---Infrastructure_JR2020262",
+"wd:nvidia:/job/US-CA-Santa-Clara/Senior-Linux-Kernel-Systems-Software-Engineer---CSP-Engagements_JR2015287",
 "wd:nvidia:/job/US-CA-Santa-Clara/Senior-Platform-Software-Engineer---Factory_JR2012307",
 "wd:nvidia:/job/US-CA-Santa-Clara/Senior-Software-Architect---Deep-Learning-and-HPC-Communications_JR2016116",
+"wd:nvidia:/job/US-CA-Santa-Clara/Senior-System-Software-Engineer-Platform---Server-Embedded-Firmware_JR2014509",
 "wd:nvidia:/job/US-CA-Santa-Clara/Software-Engineering-Manager---GPU-Communications-Libraries_JR1980109"
 ]
