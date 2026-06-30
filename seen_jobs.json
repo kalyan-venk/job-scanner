@@ -65,6 +65,7 @@
 "gh:doordashusa:8021148",
 "gh:doordashusa:8024217",
 "gh:doordashusa:8024644",
+"gh:dropbox:8031441",
 "gh:figma:6100023004",
 "gh:figma:6102379004",
 "gh:hubspotjobs:7488367",
@@ -88,7 +89,6 @@
 "lv:mistral:4eca6d89-c813-4f50-969c-b3ea88b6b956",
 "lv:mistral:d495bb77-df1f-44ef-9b63-e6f54cc95e41",
 "lv:mistral:e6accd7d-27d5-45f0-9f35-3454064374af",
-"lv:palantir:e500bcf3-19d8-4d3c-b340-4d76e4a55b40",
 "lv:zoox:00694777-4083-426f-8382-3d0073c34787",
 "lv:zoox:44136143-ba13-4839-bdc5-26a7633080a3",
 "lv:zoox:b346616d-9891-4c68-a8ac-22bd97feac01",
@@ -102,6 +102,5 @@
 "wd:nvidia:/job/US-CA-Santa-Clara/Senior-Software-Engineer---Manufacturing-and-Factory_JR2020348-1",
 "wd:nvidia:/job/US-CA-Santa-Clara/Senior-Software-Engineer--Agentic-Engineering_JR2018162",
 "wd:nvidia:/job/US-CA-Santa-Clara/Senior-System-Software-Engineer-Platform---Server-Embedded-Firmware_JR2014509",
-"wd:nvidia:/job/US-CA-Santa-Clara/Senior-Systems-Software-Engineer--Data-Center-Platform-Enablement_JR2019870",
-"wd:nvidia:/job/US-CA-Santa-Clara/Software-Engineering-Manager---GPU-Communications-Libraries_JR1980109"
+"wd:nvidia:/job/US-CA-Santa-Clara/Senior-Systems-Software-Engineer--Data-Center-Platform-Enablement_JR2019870"
 ]
