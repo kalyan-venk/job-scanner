@@ -58,6 +58,7 @@
 "gh:datadog:8035492",
 "gh:datadog:8042240",
 "gh:discord:8609250002",
+"gh:dropbox:8017512",
 "gh:dropbox:8031441",
 "gh:figma:6100023004",
 "gh:figma:6102379004",
@@ -90,5 +91,6 @@
 "wd:nvidia:/job/US-CA-Remote/Senior-Deep-Learning-Performance-Architect_JR2012736",
 "wd:nvidia:/job/US-CA-Santa-Clara/Senior-Customer-Technical-Program-Manager---AI-Datacenter_JR2020290",
 "wd:nvidia:/job/US-CA-Santa-Clara/Senior-Software-Engineer---Topography_JR2020161",
+"wd:nvidia:/job/US-CA-Santa-Clara/Senior-Software-Engineer--CUDA-UMD---Graphs-and-GPU-Sharing_JR2014056",
 "wd:nvidia:/job/US-CA-Santa-Clara/Senior-Systems-Software-Engineer--Containers-and-Kubernetes_JR2014488"
 ]
